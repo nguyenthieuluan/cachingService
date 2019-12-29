@@ -12,9 +12,22 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.commonService.getRequest().subscribe(() => {
-      this.commonService.getRequest().subscribe(() => {
-        this.commonService.getRequest().subscribe();
-      });
+      // console.log('sub 1 🤐');
     });
+
+    this.commonService.getRequest('2').subscribe(() => {
+      // console.log('sub 2 😂');
+    });
+
+    this.commonService.getRequest(null, { body: 2 }).subscribe(() => {
+      // console.log('sub 3 ヾ(≧▽≦*)oヾ');
+    });
+
+  }
+
+  getRequest(event): void {
+    // console.log('event 📧', event);
+    const body = { body: event };
+    this.commonService.getRequest(event, body).subscribe();
   }
 }

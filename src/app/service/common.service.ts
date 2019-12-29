@@ -9,9 +9,15 @@ export class CommonService {
 
   constructor(private http: HttpClient) { }
 
-  getRequest(): Observable<object> {
-    const url = 'http://localhost:3000/get';
-    return this.http.get(url);
+  getRequest(param?: string, body?: any): Observable<object> {
+    let baseUrl = `http://localhost:3000/get`;
+    if (param) {
+      baseUrl = `${baseUrl}?param1=${param}`;
+    }
+    const url = baseUrl;
+    console.log('body', body);
+    
+    return this.http.get(url, body);
   }
 
   getRequestWithQuery() {
