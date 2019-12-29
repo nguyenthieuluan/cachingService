@@ -10,7 +10,7 @@ export class CommonService {
   constructor(private http: HttpClient) { }
 
   getRequest(): Observable<object> {
-    const url: string = 'http://localhost:3001/get';
+    const url = 'http://localhost:3000/get';
     return this.http.get(url);
   }
 

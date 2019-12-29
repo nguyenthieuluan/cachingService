@@ -11,8 +11,10 @@ export class AppComponent implements OnInit {
   constructor(private commonService: CommonService) { }
 
   ngOnInit(): void {
-    this.commonService.getRequest();
-    this.commonService.getRequest();
-    this.commonService.getRequest();
+    this.commonService.getRequest().subscribe(() => {
+      this.commonService.getRequest().subscribe(() => {
+        this.commonService.getRequest().subscribe();
+      });
+    });
   }
 }
