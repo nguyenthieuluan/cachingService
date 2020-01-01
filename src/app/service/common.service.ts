@@ -15,8 +15,6 @@ export class CommonService {
       baseUrl = `${baseUrl}?param1=${param}`;
     }
     const url = baseUrl;
-    console.log('body', body);
-    
     return this.http.get(url, body);
   }
 

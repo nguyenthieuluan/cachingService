@@ -1,17 +1,18 @@
 import { Injectable } from '@angular/core';
-import { HttpRequest, HttpHandler, HttpResponse } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { HttpRequest, HttpHandler, HttpResponse, HttpEvent } from '@angular/common/http';
 import { tap, share } from 'rxjs/operators';
+import { of, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CacheRegistrationService {
-  private cachedData = new Map<string, any>();
-  private timer = 2000;
-  constructor() { }
+  private cachedData: Map<string, HttpResponse<object> | Observable<HttpEvent<object>>>
+  = new Map<string, HttpResponse<object> | Observable<HttpEvent<object>>>();
+  private timer: number = 1000;
+  private services: string[] = [];
 
-  private services = [];
+  constructor() { }
 
   public addedToCache(serviceUri: string) {
     return this.services.indexOf(serviceUri) > -1;
@@ -24,57 +25,42 @@ export class CacheRegistrationService {
     }
   }
 
-  public createCache(req: HttpRequest<any>, next: HttpHandler) {
-    console.log((req));
-    const URL_KEY = JSON.stringify(req);
-    if (
-        req.method !== 'GET' ||
-        !this.addedToCache(req.url.split('?')[0])) {
-        return next.handle(req);
+  public createCache(req: HttpRequest<object>, next: HttpHandler) {
+    const reqKey = JSON.stringify(req);
+    const baseUrl: string = req.url.split('?')[0];
+
+    if (req.method !== 'GET' || !this.addedToCache(baseUrl)) {
+      return next.handle(req);
     }
 
-    // Also leave scope of resetting already cached data for a URI
-    if (req.headers.get('reset-cache')) {
-        this.cachedData.delete(URL_KEY);
-    }
-
-    // Checked if there is cached data for this URI
-    const lastResponse = this.cachedData.get(URL_KEY);
+    const lastResponse: HttpResponse<object> | Observable<HttpEvent<object>> = this.cachedData.get(reqKey);
+    // Checked if there is cached data for this req
+    // In case of parallel requests to same req,
+    // return the request already in progress
+    // otherwise return the last cached data
     if (lastResponse) {
-        // In case of parallel requests to same URI,
-        // return the request already in progress
-        // otherwise return the last cached data
-        return (lastResponse instanceof Observable)
-            ? lastResponse : of(lastResponse.clone());
+      return (lastResponse instanceof Observable) ? lastResponse : of(lastResponse.clone());
     }
 
-    // If the request of going through for first time
-    // then let the request proceed and cache the response
-    const requestHandle = next.handle(req).pipe(
-        tap((stateEvent) => {
-            if (stateEvent instanceof HttpResponse) {
-                this.cachedData.set(
-                    URL_KEY,
-                    stateEvent.clone()
-                );
-                this.scheduleCleanCache(URL_KEY, this.timer);
-            }
-        }),
-        share()
+    const requestHandle: Observable<HttpEvent<object>> = next.handle(req).pipe(
+      tap((stateEvent) => {
+        if (stateEvent instanceof HttpResponse) {
+          this.cachedData.set(reqKey, stateEvent.clone());
+          this.scheduleCleanCache(reqKey, this.timer);
+        }
+      }),
+      share()
     );
 
-
     // Meanwhile cache the request Observable to handle parallel request
-    this.cachedData.set(req.urlWithParams, requestHandle);
+    this.cachedData.set(reqKey, requestHandle);
 
     return requestHandle;
   }
 
   scheduleCleanCache(key: string, timer: number) {
-    // console.log('key ☠', key);
-
     setTimeout(() => {
-        this.cachedData.delete(key);
+      this.cachedData.delete(key);
     }, timer);
-}
+  }
 }
